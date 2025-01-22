@@ -1,0 +1,107 @@
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@200..1000&display=swap');
+body{
+     font-family: "Cairo", sans-serif !important;
+}
+*{
+     font-family: "Cairo", sans-serif !important;
+}
+
+.messages-section {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.chat-header {
+  background-color: #5f8780;
+  color: white;
+}
+
+.messages-content {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 16px;
+  background-color: #e5ddd5;
+  border-radius: 4px;
+  height: calc(100vh - 128px);
+  width: 75%;
+  margin: auto;
+}
+
+.message-input-container {
+  display: flex;
+  align-items: center;
+  padding: 8px;
+}
+
+.message-input {
+  width: 100%;
+}
+
+.v-list {
+  background-color: #e5ddd5;
+}
+
+.send-button {
+  margin-left: 8px;
+}
+
+.my-message {
+  display: flex;
+  justify-content: end;
+  background-color: #f7f5a885;
+  padding: 8px 12px;
+  border-radius: 10px !important;
+  margin-bottom: 10px;
+  max-width: 60%;
+  margin-left: auto;
+  color: black;
+  text-align: right;
+}
+
+.other-message {
+  display: flex;
+  justify-content: flex-start;
+  background-color: #f1f1f1;
+  padding: 8px 12px;
+  border-radius: 10px !important;
+  margin-bottom: 10px;
+  max-width: 60%;
+  color: black;
+}
+
+.other-message strong{
+  display: flex;
+  justify-content: start;
+}
+
+.my-message strong{
+  display: flex;
+  justify-content: end;
+}
+
+.message-image,
+.message-video {
+  width: 250px;
+  border-radius: 8px;
+  margin: 5px 0;
+}
+
+.no-messages {
+  padding: 20px;
+  text-align: center;
+  color: grey;
+}
+
+.messages-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.messages-content::-webkit-scrollbar-thumb {
+  background-color: #fff;
+  border-radius: 4px;
+}
+
+.messages-content::-webkit-scrollbar-track {
+  background-color: #e5ddd5;
+}

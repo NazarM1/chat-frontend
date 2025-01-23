@@ -73,28 +73,6 @@ export default {
         console.error("Error fetching group messages:", error);
       }
     },
-
-    // async sendMessage(content) {
-    //   try {
-    //     const payload = { content, room: this.selectedRoom };
-    //     await axios.post("/api/messages/", payload);
-    //     this.fetchGroupMessages(this.selectedRoom); // تحديث الرسائل
-    //   } catch (error) {
-    //     console.error("Error sending message:", error);
-    //   }
-    // },
-
-    // async uploadMedia(file) {
-    //   try {
-    //     const formData = new FormData();
-    //     formData.append("media", file);
-    //     formData.append("room", this.selectedRoom);
-    //     await axios.post("/api/messages/media/", formData);
-    //     this.fetchGroupMessages(this.selectedRoom); // تحديث الرسائل
-    //   } catch (error) {
-    //     console.error("Error uploading media:", error);
-    //   }
-    // },
   },
   mounted() {
     this.fetchRoomsAndUsers();

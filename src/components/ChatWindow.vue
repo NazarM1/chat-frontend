@@ -78,178 +78,41 @@ export default {
     messages: Array,
     selectedChatTitle: String,
     selectedRoom: String,
-    chatType: String,
+    activeWebsockets: Object, // قائمة باتصالات WebSocket النشطة
   },
   data() {
     return {
       newMessage: "",
-      websocket: null, // WebSocket instance
     };
-  },
-  mounted() {
-    this.initWebSocket();
-    if (Notification.permission !== "granted") {
-      Notification.requestPermission();
-    }
   },
   methods: {
     isImage(path) {
       const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
-
-      const url = typeof path === 'object' && path.url ? path.url : path;
-      if (typeof url === 'string') {
-        const extension = url.split('.').pop().toLowerCase();
-        return imageExtensions.includes(extension);
-      }
-
-      return false;
+      const extension = this.getFileExtension(path);
+      return imageExtensions.includes(extension);
     },
     isVideo(path) {
       const videoExtensions = ['mp4', 'mov', 'wmv', 'flv', 'avi', 'mkv', 'webm'];
-
-      const url = typeof path === 'object' && path.url ? path.url : path;
-      if (typeof url === 'string') {
-        const extension = url.split('.').pop().toLowerCase();
-        return videoExtensions.includes(extension);
-      }
-
-      return false;
+      const extension = this.getFileExtension(path);
+      return videoExtensions.includes(extension);
     },
     isAudio(path) {
       const audioExtensions = ['mp3', 'wav', 'ogg', 'flac', 'aac', 'm4a'];
-
-      const url = typeof path === 'object' && path.url ? path.url : path;
-      if (typeof url === 'string') {
-        const extension = url.split('.').pop().toLowerCase();
-        return audioExtensions.includes(extension);
-      }
-
-      return false;
+      const extension = this.getFileExtension(path);
+      return audioExtensions.includes(extension);
     },
     isFile(path) {
       const fileExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip', 'rar'];
-
+      const extension = this.getFileExtension(path);
+      return fileExtensions.includes(extension);
+    },
+    getFileExtension(path) {
       const url = typeof path === 'object' && path.url ? path.url : path;
       if (typeof url === 'string') {
-        const extension = url.split('.').pop().toLowerCase();
-        return fileExtensions.includes(extension);
+        return url.split('.').pop().toLowerCase();
       }
-
-      return false;
+      return "";
     },
-
-    // async fetchGroupMessages(groupName) {
-    //   try {
-    //     const response = await axios.get(`/api/rooms/${groupName}/`);
-    //     const currentUser = localStorage.getItem("username");
-    //     // console.log(currentUser);
-    //     this.messages = response.data.messages.map((msg) => ({
-    //       ...msg,
-    //       isUser: msg.user.username === currentUser,
-    //     }));
-    //     this.selectedChatTitle = `Group: ${groupName}`;
-    //     this.selectedRoom = groupName;
-    //   } catch (error) {
-    //     console.error("Error fetching group messages:", error);
-    //   }
-    // },
-
-    // دالة لإظهار إشعار بسيط
-    showNotification(message, room) {
-      if (!("Notification" in window)) return;
-
-      // تحقق من إذن الإشعارات
-      if (Notification.permission === "granted") {
-        // افترض أن roomNameCurrent هو اسم الغرفة التي يتواجد فيها المستخدم حاليًا
-        const roomNameCurrent = this.selectedRoom; // استبدل getCurrentRoomName بالوظيفة المناسبة لديك للحصول على اسم الغرفة الحالية
-
-        // تحقق مما إذا كانت الصفحة غير نشطة أو المستخدم في غرفة مختلفة
-        if (document.hidden || roomNameCurrent !== room) {
-          const notification = new Notification(`New Message in ${room}`, {
-            body: `${message.user.username}: ${message.content || "Media message"}`,
-            icon: "@/assets/notifications.png", // أيقونة الإشعار
-          });
-
-          // التركيز على الصفحة عند النقر على الإشعار
-          notification.onclick = () => window.focus();
-        }
-      }
-    },
-
-
-    initWebSocket() {
-      const token = localStorage.getItem("accessToken");
-      const socketUrl = `ws://localhost:3456/ws/chat/${this.selectedRoom}/?token=${token}`;
-      this.websocket = new WebSocket(socketUrl);
-
-      this.websocket.onopen = () => {
-        console.log("WebSocket connection established");
-      };
-
-      this.websocket.onmessage = async (event) => {
-        try {
-          const data = JSON.parse(event.data);
-
-          const isUser = data.user.username === localStorage.getItem("username");
-          let messageContent = data.message;
-          let media = null;
-          let messageType = 'text'; // نوع الرسالة الافتراضي هو نص
-
-          if (data.media && data.media.url) {
-            const mediaUrl = 'http://127.0.0.1:3456' + data.media.url;
-
-            if (this.isImage(mediaUrl)) {
-              messageType = 'image';
-              media = mediaUrl;
-            } else if (this.isVideo(mediaUrl)) {
-              messageType = 'video';
-              media = mediaUrl;
-            } else if (this.isAudio(mediaUrl)) {
-              messageType = 'audio';
-              media = mediaUrl;
-            } else if (this.isFile(mediaUrl)) {
-              messageType = 'file';
-              media = mediaUrl;
-            }
-          }
-          // console.log(data.room)
-          const newMessage = {
-            content: messageContent,
-            user: {
-                    username: data.user.username, // للاحتفاظ بـ username للمقارنة
-                    first_name: data.user.first_name,
-                    last_name: data.user.last_name,
-                  },
-            message_type: messageType,
-            media: media,
-            isUser: isUser,
-          };
-          const username = localStorage.getItem("username");
-          if (isUser) {
-            this.messages.push(newMessage);
-          } else {
-            console.log('hiiiiiiiiiiiii');
-            this.showNotification(newMessage, data.room);
-            this.messages.push(newMessage);
-          }
-
-          this.$nextTick(() => {
-            this.scrollToBottom();
-          });
-        } catch (error) {
-          console.error("Error processing WebSocket message:", error);
-        }
-      };
-
-      this.websocket.onerror = (error) => {
-        console.error("WebSocket error:", error);
-      };
-
-      this.websocket.onclose = () => {
-        console.log("WebSocket connection closed");
-      };
-    },
-
     sendMessage() {
       if (!this.newMessage.trim()) return;
 
@@ -260,13 +123,13 @@ export default {
         media: null,
       };
 
-      if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-        this.websocket.send(JSON.stringify(messageData));
+      const websocket = this.activeWebsockets[this.selectedRoom];
+      if (websocket && websocket.readyState === WebSocket.OPEN) {
+        websocket.send(JSON.stringify(messageData));
       }
 
       this.newMessage = "";
     },
-
     uploadMedia(event) {
       const file = event.target.files[0];
       if (!file) return;
@@ -281,13 +144,13 @@ export default {
           media: base64String,
         };
 
-        if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-          this.websocket.send(JSON.stringify(messageData));
+        const websocket = this.activeWebsockets[this.selectedRoom];
+        if (websocket && websocket.readyState === WebSocket.OPEN) {
+          websocket.send(JSON.stringify(messageData));
         }
       };
       reader.readAsDataURL(file);
     },
-
     scrollToBottom() {
       const container = this.$refs.messagesContainer;
       if (container) {
@@ -295,14 +158,7 @@ export default {
       }
     },
   },
-
   watch: {
-    selectedRoom(newRoom) {
-      if (this.websocket) {
-        this.websocket.close();
-      }
-      this.initWebSocket();
-    },
     messages: {
       handler() {
         this.$nextTick(() => {
@@ -311,12 +167,6 @@ export default {
       },
       immediate: true,
     },
-  },
-
-  beforeDestroy() {
-    if (this.websocket) {
-      this.websocket.close();
-    }
   },
 };
 </script>

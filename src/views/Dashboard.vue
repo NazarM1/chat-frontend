@@ -1,11 +1,12 @@
-<template>
+<template >
   <v-container fluid>
+
     <v-row>
-      <!-- Chat Window -->
+      <!-- ChatWindow.vue -->
       <ChatWindow :messages="messages" :selectedChatTitle="selectedChatTitle" :selectedRoom="selectedRoom"
         :activeWebsockets="activeWebsockets" @newMessage="addNewMessage" @sendMessage="sendMessage"
         @uploadMedia="uploadMedia" />
-      <!-- Sidebar -->
+      <!-- Sidebar.vue -->
       <Sidebar :users="users" :groups="groups" @selectChat="handleChatSelection" />
     </v-row>
   </v-container>
@@ -20,6 +21,7 @@ export default {
   components: { Sidebar, ChatWindow },
   data() {
     return {
+      username: '',
       users: [],
       groups: [],
       messages: [],
@@ -29,6 +31,7 @@ export default {
     };
   },
   methods: {
+
     isImage(path) {
       const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
       const extension = this.getFileExtension(path);
@@ -125,9 +128,12 @@ export default {
           if (isUser) {
             this.messages.push(newMessage);
           } else {
-            console.log('hiiiiiiiiiiiii');
-            this.showNotification(newMessage, data.room);
-            this.messages.push(newMessage);
+            if(data.room == this.selectedRoom){
+              this.messages.push(newMessage);
+            }else{
+              this.showNotification(newMessage, data.room);
+              // this.messages.push(newMessage);
+            }
           }
 
           // التمرير للأسفل تلقائيًا
@@ -168,7 +174,7 @@ export default {
 
     showNotification(message, room) {
       if (Notification.permission === "granted" && document.hidden) {
-        const notification = new Notification(`رسالة جديدة من ${room}`, {
+        const notification = new Notification(`رسالة جديدة ${room}`, {
           body: `${message.user.first_name} ${message.user.last_name}: ${message.content || "رسالة وسائط"}`,
           icon: "@/assets/notifications.png",
         });
@@ -177,14 +183,20 @@ export default {
       }
     },
     scrollToBottom() {
-      const container = this.$refs.messagesContainer;
-      if (container) {
+  this.$nextTick(() => {
+    const container = this.$refs.messagesContainer;
+    if (container) {
+      // تأخير بسيط لضمان تحميل جميع العناصر (مثل الصور والوسائط)
+      setTimeout(() => {
         container.scrollTop = container.scrollHeight;
-      }
-    },
+      }, 100); // يمكنك تعديل الوقت إذا كان هناك وسائط كبيرة
+    }
+  });
+},
   },
 
   mounted() {
+    this.username = localStorage.getItem("username") || "Guest";
     this.fetchRoomsAndUsers();
     if (Notification.permission !== "granted") {
       Notification.requestPermission();
@@ -196,3 +208,73 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+/* Header Styles */
+.header {
+  background-color: #005f73; /* لون خلفية احترافي */
+  color: #ffffff;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.logout-btn {
+  color: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.3s ease-in-out;
+}
+
+.logout-btn:hover {
+  transform: scale(1.1);
+}
+
+/* Main Chat and Sidebar Container Styles */
+.chat-container {
+  background-color: #f9f9f9;
+  border-radius: 12px;
+  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-container {
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+}
+
+/* Chat and Sidebar Element Spacing */
+.v-col {
+  padding: 16px;
+}
+
+/* Button Hover Effects */
+.v-btn {
+  transition: transform 0.3s ease;
+}
+
+.v-btn:hover {
+  transform: scale(1.05);
+}
+
+/* Overall Layout Padding */
+.v-container {
+  padding: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .header {
+    padding: 15px;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+}
+</style>

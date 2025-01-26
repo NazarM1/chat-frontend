@@ -24,8 +24,7 @@
         }">
           <v-list-item-content>
             <template v-if="message.media">
-              <!-- <strong> {{ message.user.username }} </strong> -->
-              <strong>{{ message.user.first_name }} {{ message.user.last_name }} </strong>
+              <strong>{{ message.user.first_name }} {{ message.user.last_name }}</strong>
               <!-- عرض الصور -->
               <v-img v-if="isImage(message.media)" :src="message.media" class="message-image" alt="User Media" />
               <!-- عرض الفيديو -->
@@ -45,7 +44,6 @@
             <template v-else>
               <!-- عرض نص الرسالة -->
               <strong>{{ message.user.first_name }} {{ message.user.last_name }}</strong>
-              <!-- <strong>{{ message.user.first_name }} {{ message.user.last_name }}</strong> -->
               <v-list-item-title>{{ message.content }}</v-list-item-title>
             </template>
           </v-list-item-content>
@@ -56,10 +54,17 @@
     <!-- Message Input -->
     <v-row class="message-input-container" v-if="selectedRoom">
       <v-col cols="9">
-        <v-text-field v-model="newMessage" label="Type a message" @keyup.enter="sendMessage" solo outlined dense
-          hide-details class="message-input"></v-text-field>
+        <v-text-field
+          v-model="newMessage"
+          label="Type a message"
+          @keyup.enter="sendMessage"
+          solo
+          outlined
+          dense
+          hide-details
+          class="message-input" />
       </v-col>
-      <v-col cols="3">
+      <v-col cols="3" class="d-flex align-center">
         <v-btn @click="sendMessage" color="#5F8780" class="send-button">
           <v-icon>mdi-send</v-icon>
         </v-btn>
@@ -129,6 +134,7 @@ export default {
       }
 
       this.newMessage = "";
+      this.scrollToBottom();
     },
     uploadMedia(event) {
       const file = event.target.files[0];
@@ -150,13 +156,20 @@ export default {
         }
       };
       reader.readAsDataURL(file);
+      this.scrollToBottom();
     },
     scrollToBottom() {
-      const container = this.$refs.messagesContainer;
-      if (container) {
+  this.$nextTick(() => {
+    const container = this.$refs.messagesContainer;
+    if (container) {
+      // تأخير بسيط لضمان تحميل جميع العناصر (مثل الصور والوسائط)
+      setTimeout(() => {
         container.scrollTop = container.scrollHeight;
-      }
-    },
+      }, 100); // يمكنك تعديل الوقت إذا كان هناك وسائط كبيرة
+    }
+  });
+},
+
   },
   watch: {
     messages: {

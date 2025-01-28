@@ -26,7 +26,7 @@ export default {
     console.log(username);
       localStorage.setItem("username", this.username);
       try {
-        const response = await axios.post("/api/token/", {
+        const response = await axios.post("/api/login/", {
           username: this.username,
           password: this.password,
         });

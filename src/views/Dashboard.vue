@@ -60,25 +60,30 @@ export default {
       return "";
     },
     async fetchRoomsAndUsers() {
-      try {
-        const response = await axios.get("/api/rooms/");
-        this.groups = response.data.rooms;
-        this.users = response.data.users;
-        this.initWebSocketConnections();
-      } catch (error) {
-        console.error("Error fetching rooms and users:", error);
+    try {
+      const response = await axios.get("/api/rooms/");
+      this.groups = response.data.rooms;
+      this.users = response.data.users;
+      this.initWebSocketConnections();
+    } catch (error) {
+      if (error.response && error.response.status === 401) {
+        await this.logout();
       }
-    },
+      console.error("Error fetching rooms and users:", error);
+    }
+  },
 
     initWebSocketConnections() {
   const token = localStorage.getItem("accessToken");
+
   this.groups.forEach((group) => {
     const groupName = group.name;
     if (!this.activeWebsockets[groupName]) {
+
       const socketUrl = `ws://localhost:3456/ws/chat/${groupName}/?token=${token}`;
       const websocket = new WebSocket(socketUrl);
 
-      websocket.onopen = () => {
+      websocket.onopen = () =>{
         console.log(`WebSocket connected for group: ${groupName}`);
       };
 
@@ -111,18 +116,16 @@ export default {
               messageType = 'text';
             }
           }
-          // console.log(messageType);
-          // console.log(messageContent);
           const newMessage = {
-            content: messageContent , // النص
-            media: media, // الوسائط
+            content: messageContent ,
+            media: media,
             user: {
               username: data.user.username,
               first_name: data.user.first_name,
               last_name: data.user.last_name,
             },
-            isUser: data.user.username === localStorage.getItem("username"), // المستخدم الحالي
-            type: messageType, // نوع الرسالة
+            isUser: data.user.username === localStorage.getItem("username"),
+            type: messageType,
           };
 
           if (isUser) {
@@ -130,13 +133,13 @@ export default {
           } else {
             if(data.room == this.selectedRoom){
               this.messages.push(newMessage);
+              this.showNotification(newMessage, data.room);
             }else{
               this.showNotification(newMessage, data.room);
-              // this.messages.push(newMessage);
             }
           }
 
-          // التمرير للأسفل تلقائيًا
+
           this.$nextTick(() => {
             this.scrollToBottom();
           });
@@ -150,6 +153,9 @@ export default {
         console.log(`WebSocket connection closed for group: ${groupName}`);
       };
 
+      if (!this.$root.activeWebsockets) {
+          this.$root.activeWebsockets = {};
+        }
       this.activeWebsockets[groupName] = websocket;
     }
   });
@@ -186,10 +192,9 @@ export default {
   this.$nextTick(() => {
     const container = this.$refs.messagesContainer;
     if (container) {
-      // تأخير بسيط لضمان تحميل جميع العناصر (مثل الصور والوسائط)
-      setTimeout(() => {
+      // setTimeout(() => {
         container.scrollTop = container.scrollHeight;
-      }, 100); // يمكنك تعديل الوقت إذا كان هناك وسائط كبيرة
+      // }, 100);
     }
   });
 },
@@ -204,15 +209,23 @@ export default {
   },
 
   beforeDestroy() {
-    Object.values(this.activeWebsockets).forEach((websocket) => websocket.close());
-  },
+  if (this.$root.activeWebsockets) {
+    Object.values(this.$root.activeWebsockets).forEach((websocket) => {
+      if (websocket && websocket.readyState === WebSocket.OPEN) {
+        websocket.close(); // إغلاق الاتصال
+        console.log("WebSocket connection closed.");
+      }
+    });
+    this.$root.activeWebsockets = {}; // مسح جميع اتصالات الـ WebSocket من الذاكرة
+  }
+},
 };
 </script>
 
 <style scoped>
 /* Header Styles */
 .header {
-  background-color: #005f73; /* لون خلفية احترافي */
+  background-color: #005f73;
   color: #ffffff;
   padding: 20px;
   border-radius: 12px;

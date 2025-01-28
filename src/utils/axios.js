@@ -1,4 +1,5 @@
 import axios from 'axios';
+import router from "@/router";
 
 const instance = axios.create({
   baseURL: 'http://127.0.0.1:3456', // عنوان الـ API الأساسي
@@ -22,8 +23,17 @@ async function logout() {
   } catch (error) {
     console.error("Error during logout API call:", error);
   } finally {
+    const username = localStorage.getItem('username');
+    if (username) {
+      try {
+        // تحديث حالة المستخدم إلى "offline"
+        await axios.post('/api/user/status/', { username: username, status: 'offline' });
+      } catch (error) {
+        console.error("Error updating user status:", error);
+      }
+    }
     localStorage.clear(); // مسح جميع البيانات المخزنة
-    window.location.href = '/login'; // إعادة التوجيه إلى صفحة تسجيل الدخول
+    router.push({ name: 'Login' }); // إعادة التوجيه إلى صفحة تسجيل الدخول
   }
 }
 
@@ -66,17 +76,21 @@ instance.interceptors.response.use(
 
       try {
         const refreshToken = localStorage.getItem('refreshToken');
-        const response = await axios.post('/api/token/refresh/', {
+        console.log(refreshToken, 'refreshToken');
+        const response = await instance.post('/api/login/refresh/', {
           refresh: refreshToken,
         });
 
         const newAccessToken = response.data.access;
+        console.log(newAccessToken, 'newAccessToken');
         localStorage.setItem('accessToken', newAccessToken);
+        localStorage.setItem('refreshToken', response.data.refresh);
 
         refreshSubscribers.forEach((cb) => cb(newAccessToken));
         refreshSubscribers = [];
 
         originalRequest.headers['Authorization'] = `Bearer ${newAccessToken}`;
+
         return instance(originalRequest);
       } catch (err) {
         console.error('Failed to refresh token:', err);

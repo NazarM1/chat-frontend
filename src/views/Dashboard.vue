@@ -63,7 +63,7 @@ export default {
       try {
         const response = await axios.get("/api/rooms/");
         this.groups = response.data.rooms;
-        this.users = response.data.users;
+        // this.users = response.data.users;
 
         // استرجاع الرسائل غير المقروءة
         const unreadMessagesResponse = await axios.get("/api/unread-messages/");
@@ -72,6 +72,7 @@ export default {
         // عرض الإشعارات للرسائل غير المقروءة
         unreadMessages.forEach(message => {
           this.showUnreadNotification({
+            id: message.id,
             content: message.message_data.content,
             user: {
               username: message.user_data.username,
@@ -143,6 +144,7 @@ export default {
                   first_name: data.user.first_name,
                   last_name: data.user.last_name,
                 },
+                formatted_time:data.timestamp,
                 isUser: data.user.username === localStorage.getItem("username"),
                 type: messageType,
               };
@@ -196,7 +198,7 @@ export default {
         console.error("Error fetching group messages:", error);
       }
     },
-
+    // إشعارات الرسائل الفورية
     showNotification(message, room) {
       if (Notification.permission === "granted" && document.hidden) {
         const notification = new Notification(`رسالة جديدة ${room}`, {
@@ -207,9 +209,8 @@ export default {
         notification.onclick = () => window.focus();
       }
     },
-    showUnreadNotification(message, room) {
-      console.log(',,,,,,,,,,,,,,,,,,,,,,,,,');
-
+    // إشعارات الرسائل غير المقروءة
+    async showUnreadNotification(message, room) {
       if (Notification.permission === "granted") {
         const notification = new Notification(`رسالة جديدة ${room}`, {
           body: `${message.user.first_name} ${message.user.last_name}: ${message.content || "رسالة وسائط"}`,
@@ -218,6 +219,9 @@ export default {
 
         notification.onclick = () => window.focus();
       }
+
+      await axios.post('/api/message/status/', {id:message.id});
+
     },
     scrollToBottom() {
       this.$nextTick(() => {

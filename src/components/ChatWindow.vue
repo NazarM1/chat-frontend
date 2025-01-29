@@ -25,6 +25,7 @@
           <v-list-item-content>
             <template v-if="message.media">
               <strong>{{ message.user.first_name }} {{ message.user.last_name }}</strong>
+
               <!-- عرض الصور -->
               <v-img v-if="isImage(message.media)" :src="message.media" class="message-image" alt="User Media" />
               <!-- عرض الفيديو -->
@@ -35,16 +36,19 @@
               <audio v-else-if="isAudio(message.media)" controls class="message-audio">
                 <source :src="message.media" type="audio/mpeg" />
               </audio>
+
               <!-- عرض الملفات -->
               <a v-else-if="isFile(message.media)" :href="message.media" target="_blank" class="message-file">
                 Download File
               </a>
+              <p style="font-size: 8px;">{{ message.formatted_time }}</p>
             </template>
 
             <template v-else>
               <!-- عرض نص الرسالة -->
               <strong>{{ message.user.first_name }} {{ message.user.last_name }}</strong>
-              <v-list-item-title>{{ message.content }}</v-list-item-title>
+              <v-list-item-title>{{ message.content }}<p style="font-size: 8px;">{{ message.formatted_time }}</p></v-list-item-title>
+
             </template>
           </v-list-item-content>
         </v-list-item>

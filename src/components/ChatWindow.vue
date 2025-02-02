@@ -41,13 +41,13 @@
               <a v-else-if="isFile(message.media)" :href="message.media" target="_blank" class="message-file">
                 Download File
               </a>
-              <p style="font-size: 8px;">{{ message.formatted_time }}</p>
+              <p style="font-size: 10px;">{{ message.formatted_time }}</p>
             </template>
 
             <template v-else>
               <!-- عرض نص الرسالة -->
               <strong>{{ message.user.first_name }} {{ message.user.last_name }}</strong>
-              <v-list-item-title>{{ message.content }}<p style="font-size: 8px;">{{ message.formatted_time }}</p></v-list-item-title>
+              <v-list-item-title style="text-wrap: auto;">{{ message.content }}<p style="font-size: 10px; text-align: left;">{{ message.formatted_time }}</p></v-list-item-title>
 
             </template>
           </v-list-item-content>

@@ -7,7 +7,7 @@
         :activeWebsockets="activeWebsockets" @newMessage="addNewMessage" @sendMessage="sendMessage"
         @uploadMedia="uploadMedia" />
       <!-- Sidebar.vue -->
-      <Sidebar :users="users" :groups="groups" @selectChat="handleChatSelection" />
+      <Sidebar :users="users" :groups="groups" :notifications="phaseContents" @selectChat="handleChatSelection" />
     </v-row>
   </v-container>
 </template>
@@ -28,6 +28,7 @@ export default {
       selectedChatTitle: "",
       selectedRoom: null,
       activeWebsockets: {}, // لتتبع اتصالات الـ WebSocket
+      phaseContents: [], // بيانات phase_contents
     };
   },
   methods: {
@@ -63,6 +64,7 @@ export default {
       try {
         const response = await axios.get("/api/rooms/");
         this.groups = response.data.rooms;
+        this.phaseContents = response.data.phase_contents; // تعيين phase_contents
         // this.users = response.data.users;
 
         // استرجاع الرسائل غير المقروءة
@@ -92,7 +94,6 @@ export default {
         console.error("Error fetching rooms and users:", error);
       }
     },
-
     initWebSocketConnections() {
       const token = localStorage.getItem("accessToken");
 
@@ -156,7 +157,7 @@ export default {
                   this.messages.push(newMessage);
                   this.showNotification(newMessage, data.room);
                 } else {
-                  this.showNotification(newMessage, data.room);
+                  this.showUnreadNotification(newMessage, data.room);
                 }
               }
 
@@ -184,7 +185,6 @@ export default {
     handleChatSelection(chat) {
       this.fetchGroupMessages(chat.name);
     },
-
     async fetchGroupMessages(groupName) {
       try {
         const response = await axios.get(`/api/rooms/${groupName}/`);
@@ -198,7 +198,6 @@ export default {
         console.error("Error fetching group messages:", error);
       }
     },
-    // إشعارات الرسائل الفورية
     showNotification(message, room) {
       if (Notification.permission === "granted" && document.hidden) {
         const notification = new Notification(`رسالة جديدة ${room}`, {
@@ -209,7 +208,6 @@ export default {
         notification.onclick = () => window.focus();
       }
     },
-    // إشعارات الرسائل غير المقروءة
     async showUnreadNotification(message, room) {
       if (Notification.permission === "granted") {
         const notification = new Notification(`رسالة جديدة ${room}`, {

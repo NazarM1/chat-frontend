@@ -1,18 +1,44 @@
 <template>
   <v-col cols="3" class="sidebar">
-    <v-divider />
-
-    <!-- Content based on selected tab -->
     <v-list dense>
       <template v-if="activeTab === 0">
         <div style="display: flex; flex-direction: column;">
           <div style="display: flex; flex-direction: row-reverse; justify-content: space-between; align-items: center;">
             <v-subheader class="sidebar-title">{{ username }}</v-subheader>
+
+            <!-- أيقونة الجرس للإشعارات -->
+            <v-menu transition="scale-transition" offset-y>
+              <template v-slot:activator="{ props }">
+                <v-btn icon color="primary" v-bind="props">
+                  <v-icon>mdi-bell</v-icon>
+                  <v-badge v-if="notifications.length > 0" color="red" :content="notifications.length" bordered />
+                </v-btn>
+              </template>
+
+              <v-list>
+                <v-list-item v-for="(notification, index) in notifications" :key="index">
+                  <v-list-item-content>
+                    <v-list-item-title>{{ notification.phase }}</v-list-item-title>
+                    <v-list-item-subtitle>{{ notification.forword }}</v-list-item-subtitle>
+                    <v-list-item-subtitle>{{ notification.fk_room.name }}</v-list-item-subtitle>
+                  </v-list-item-content>
+                </v-list-item>
+
+                <!-- عند عدم وجود إشعارات -->
+                <v-list-item v-if="notifications.length === 0">
+                  <v-list-item-content>
+                    <v-list-item-title>لا توجد إشعارات جديدة</v-list-item-title>
+                  </v-list-item-content>
+                </v-list-item>
+              </v-list>
+            </v-menu>
+
             <!-- زر تسجيل الخروج -->
             <v-btn icon @click="logout">
-              <v-icon>mdi-logout</v-icon> <!-- أيقونة تسجيل الخروج -->
+              <v-icon>mdi-logout</v-icon>
             </v-btn>
           </div>
+          <v-divider />
           <v-subheader class="sidebar-title">المجموعات</v-subheader>
         </div>
         <v-list-item v-for="group in groups" :key="group.id" @click="selectGroupChat(group.name)"
@@ -27,16 +53,15 @@
 </template>
 
 <script>
-import axios from "../utils/axios";
-
 export default {
   props: {
     groups: Array,
+    notifications: Array, // استقبال phase_contents من dashboard.vue
   },
   data() {
     return {
       username: '',
-      activeTab: 0, // Keep only the "Groups" tab active
+      activeTab: 0,
     };
   },
   methods: {
@@ -67,16 +92,16 @@ export default {
       }
     },
     closeAllWebSocketConnections() {
-    if (this.$root.activeWebsockets) {
-      Object.values(this.$root.activeWebsockets).forEach((websocket) => {
-        if (websocket && websocket.readyState === WebSocket.OPEN) {
-          websocket.close(); // إغلاق الاتصال
-          console.log("WebSocket connection closed.");
-        }
-      });
-      this.$root.activeWebsockets = {}; // مسح جميع اتصالات الـ WebSocket من الذاكرة
-    }
-  },
+      if (this.$root.activeWebsockets) {
+        Object.values(this.$root.activeWebsockets).forEach((websocket) => {
+          if (websocket && websocket.readyState === WebSocket.OPEN) {
+            websocket.close();
+            console.log("WebSocket connection closed.");
+          }
+        });
+        this.$root.activeWebsockets = {};
+      }
+    },
     selectGroupChat(groupName) {
       this.$emit("selectChat", { type: 'group', name: groupName });
     },

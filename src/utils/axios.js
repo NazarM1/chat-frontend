@@ -13,30 +13,6 @@ function subscribeTokenRefresh(cb) {
   refreshSubscribers.push(cb);
 }
 
-// دالة لتسجيل الخروج
-async function logout() {
-  try {
-    const refreshToken = localStorage.getItem('refreshToken');
-    if (refreshToken) {
-      await axios.post('/api/token/logout/', { refresh: refreshToken });
-    }
-  } catch (error) {
-    console.error("Error during logout API call:", error);
-  } finally {
-    const username = localStorage.getItem('username');
-    if (username) {
-      try {
-        // تحديث حالة المستخدم إلى "offline"
-        await axios.post('/api/user/status/', { username: username, status: 'offline' });
-      } catch (error) {
-        console.error("Error updating user status:", error);
-      }
-    }
-    localStorage.clear(); // مسح جميع البيانات المخزنة
-    router.push({ name: 'Login' }); // إعادة التوجيه إلى صفحة تسجيل الدخول
-  }
-}
-
 // إضافة الـ Token إلى الهيدر لكل الطلبات
 instance.interceptors.request.use(
   (config) => {

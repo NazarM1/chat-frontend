@@ -20,7 +20,7 @@
                   <v-list-item-content>
                     <v-list-item-title>{{ notification.phase }}</v-list-item-title>
                     <v-list-item-subtitle>{{ notification.forword }}</v-list-item-subtitle>
-                    <v-list-item-subtitle>{{ notification.fk_room.name }}</v-list-item-subtitle>
+                    <v-list-item-subtitle>{{ notification.fk_room }}</v-list-item-subtitle>
                   </v-list-item-content>
                 </v-list-item>
 
@@ -49,6 +49,41 @@
         </v-list-item>
       </template>
     </v-list>
+
+    <!-- زر لإضافة PhaseContent -->
+    <v-btn color="primary" @click="openAddPhaseContentDialog" class="add-phase-content-btn">
+      <v-icon>mdi-plus</v-icon> إضافة PhaseContent
+    </v-btn>
+
+    <!-- نافذة منبثقة لإضافة PhaseContent -->
+    <v-dialog v-model="addPhaseContentDialog" max-width="500px">
+      <v-card>
+        <v-card-title>
+          <span class="headline">إضافة PhaseContent</span>
+        </v-card-title>
+        <v-card-text>
+          <v-form @submit.prevent="addPhaseContent">
+            <v-text-field v-model="phase" label="Phase" required></v-text-field>
+            <v-select
+              v-model="forword"
+              :items="rollChoices"
+              label="Forword"
+              required
+            ></v-select>
+            <v-select
+              v-model="fk_room"
+              :items="rooms"
+              item-text="name"
+              item-value="id"
+              label="Room"
+              required
+            ></v-select>
+            <v-btn type="submit" color="primary">إضافة</v-btn>
+            <v-btn @click="closeAddPhaseContentDialog" color="secondary">إلغاء</v-btn>
+          </v-form>
+        </v-card-text>
+      </v-card>
+    </v-dialog>
   </v-col>
 </template>
 
@@ -62,6 +97,19 @@ export default {
     return {
       username: '',
       activeTab: 0,
+      websocket: null, // WebSocket connection
+      addPhaseContentDialog: false, // حالة النافذة المنبثقة
+      phase: "",
+      forword: "",
+      fk_room: null,
+      rollChoices: [
+        { text: "Administration", value: "administration" },
+        { text: "Section", value: "section" },
+        { text: "Supervisor", value: "supervisor" },
+        { text: "Student", value: "student" },
+        { text: "All", value: "all" },
+      ],
+      rooms: [],
     };
   },
   methods: {
@@ -70,7 +118,7 @@ export default {
         const refreshToken = localStorage.getItem('refreshToken');
         if (refreshToken) {
           console.log("Logging out user...");
-          await axios.post('/api/token/logout/', { refresh: refreshToken });
+          await this.axios.post('/api/token/logout/', { refresh: refreshToken });
         }
       } catch (error) {
         console.error("Error during logout API call:", error);
@@ -79,7 +127,7 @@ export default {
         if (username) {
           try {
             console.log("Updating user status to offline...");
-            await axios.post('/api/user/status/', { username: username, status: 'offline' });
+            await this.axios.post('/api/user/status/', { username: username, status: 'offline' });
           } catch (error) {
             console.error("Error updating user status:", error);
           }
@@ -105,9 +153,66 @@ export default {
     selectGroupChat(groupName) {
       this.$emit("selectChat", { type: 'group', name: groupName });
     },
+    connectWebSocket() {
+      const token = localStorage.getItem("accessToken");
+
+      this.websocket = new WebSocket(`ws://localhost:3456/ws/notifications/?token=${token}`);
+      this.websocket.onopen = () => {
+        console.log("WebSocket connected for notifications");
+      };
+
+      this.websocket.onmessage = (event) => {
+        const notification = JSON.parse(event.data);
+        this.notifications.unshift(notification); // إضافة الإشعار الجديد إلى القائمة
+      };
+
+      this.websocket.onclose = () => {
+        console.log("WebSocket connection closed for notifications");
+      };
+    },
+    openAddPhaseContentDialog() {
+      this.addPhaseContentDialog = true;
+      this.fetchRooms(); // جلب الغرف عند فتح النافذة
+    },
+    closeAddPhaseContentDialog() {
+      this.addPhaseContentDialog = false;
+      this.resetForm(); // إعادة تعيين النموذج عند الإغلاق
+    },
+    async fetchRooms() {
+      try {
+        const response = await this.axios.get("/api/rooms/");
+        this.rooms = response.data.rooms;
+      } catch (error) {
+        console.error("Error fetching rooms:", error);
+      }
+    },
+    async addPhaseContent() {
+      try {
+        const response = await this.axios.post("/api/phase-content/", {
+          phase: this.phase,
+          forword: this.forword,
+          fk_room: this.fk_room,
+        });
+        this.closeAddPhaseContentDialog();
+        this.$emit("refreshNotifications"); // إعادة تحميل الإشعارات
+      } catch (error) {
+        console.error("Error adding phase content:", error);
+      }
+    },
+    resetForm() {
+      this.phase = "";
+      this.forword = "";
+      this.fk_room = null;
+    },
   },
   mounted() {
     this.username = localStorage.getItem("username") || "Guest";
+    this.connectWebSocket(); // الاتصال بـ WebSocket
+  },
+  beforeDestroy() {
+    if (this.websocket) {
+      this.websocket.close(); // إغلاق الاتصال عند تدمير المكون
+    }
   },
 };
 </script>
@@ -126,5 +231,11 @@ export default {
 .groups-name {
   display: flex;
   justify-content: end;
+}
+
+.add-phase-content-btn {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
 }
 </style>

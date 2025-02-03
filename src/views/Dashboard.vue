@@ -15,7 +15,7 @@
 <script>
 import Sidebar from "@/components/Sidebar.vue";
 import ChatWindow from "@/components/ChatWindow.vue";
-import axios from "../utils/axios";
+// import axios from "../utils/axios";
 
 export default {
   components: { Sidebar, ChatWindow },
@@ -62,13 +62,13 @@ export default {
     },
     async fetchRoomsAndUsers() {
       try {
-        const response = await axios.get("/api/rooms/");
+        const response = await this.axios.get("/api/rooms/");
         this.groups = response.data.rooms;
         this.phaseContents = response.data.phase_contents; // تعيين phase_contents
         // this.users = response.data.users;
 
         // استرجاع الرسائل غير المقروءة
-        const unreadMessagesResponse = await axios.get("/api/unread-messages/");
+        const unreadMessagesResponse = await this.axios.get("/api/unread-messages/");
         const unreadMessages = unreadMessagesResponse.data.unread_messages;
 
         // عرض الإشعارات للرسائل غير المقروءة
@@ -96,12 +96,15 @@ export default {
     },
     initWebSocketConnections() {
       const token = localStorage.getItem("accessToken");
+      console.log(token,'22222222222222222222222');
 
       this.groups.forEach((group) => {
         const groupName = group.name;
         if (!this.activeWebsockets[groupName]) {
 
           const socketUrl = `ws://localhost:3456/ws/chat/${groupName}/?token=${token}`;
+
+
           const websocket = new WebSocket(socketUrl);
 
           websocket.onopen = () => {
@@ -187,7 +190,7 @@ export default {
     },
     async fetchGroupMessages(groupName) {
       try {
-        const response = await axios.get(`/api/rooms/${groupName}/`);
+        const response = await this.axios.get(`/api/rooms/${groupName}/`);
         this.messages = response.data.messages.map((msg) => ({
           ...msg,
           isUser: msg.user.username === localStorage.getItem("username"),
@@ -218,7 +221,7 @@ export default {
         notification.onclick = () => window.focus();
       }
 
-      await axios.post('/api/message/status/', {id:message.id});
+      await this.axios.post('/api/message/status/', {id:message.id});
 
     },
     scrollToBottom() {

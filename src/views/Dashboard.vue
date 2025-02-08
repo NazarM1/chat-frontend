@@ -1,12 +1,13 @@
 <template>
   <v-container fluid>
-
     <v-row>
+
       <!-- ChatWindow.vue -->
       <ChatWindow :messages="messages" :selectedChatTitle="selectedChatTitle" :selectedRoom="selectedRoom"
         :activeWebsockets="activeWebsockets" @newMessage="addNewMessage" @sendMessage="sendMessage"
         @uploadMedia="uploadMedia" />
       <!-- Sidebar.vue -->
+
       <Sidebar :users="users" :groups="groups" :notifications="phaseContents" @selectChat="handleChatSelection" />
     </v-row>
   </v-container>
@@ -65,6 +66,8 @@ export default {
         const response = await this.axios.get("/api/rooms/");
         this.groups = response.data.rooms;
         this.phaseContents = response.data.phase_contents; // تعيين phase_contents
+        console.log(this.phaseContents);
+
         // this.users = response.data.users;
 
         // استرجاع الرسائل غير المقروءة
@@ -96,7 +99,7 @@ export default {
     },
     initWebSocketConnections() {
       const token = localStorage.getItem("accessToken");
-      console.log(token,'22222222222222222222222');
+      // console.log(token,'22222222222222222222222');
 
       this.groups.forEach((group) => {
         const groupName = group.name;
@@ -148,7 +151,7 @@ export default {
                   first_name: data.user.first_name,
                   last_name: data.user.last_name,
                 },
-                formatted_time:data.timestamp,
+                formatted_time: data.timestamp,
                 isUser: data.user.username === localStorage.getItem("username"),
                 type: messageType,
               };
@@ -221,7 +224,7 @@ export default {
         notification.onclick = () => window.focus();
       }
 
-      await this.axios.post('/api/message/status/', {id:message.id});
+      await this.axios.post('/api/message/status/', { id: message.id });
 
     },
     scrollToBottom() {

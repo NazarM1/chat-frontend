@@ -5,7 +5,6 @@
         <div style="display: flex; flex-direction: column;">
           <div style="display: flex; flex-direction: row-reverse; justify-content: space-between; align-items: center;">
             <v-subheader class="sidebar-title">{{ username }}</v-subheader>
-
             <!-- أيقونة الجرس للإشعارات -->
             <v-menu transition="scale-transition" offset-y>
               <template v-slot:activator="{ props }">
@@ -20,7 +19,9 @@
                   <v-list-item-content>
                     <v-list-item-title>{{ notification.phase }}</v-list-item-title>
                     <v-list-item-subtitle>{{ notification.forword }}</v-list-item-subtitle>
-                    <v-list-item-subtitle>{{ notification.fk_room }}</v-list-item-subtitle>
+                    <v-list-item-subtitle v-if="notification.fk_room.name">{{ notification.fk_room.name
+                      }}</v-list-item-subtitle>
+                    <v-list-item-subtitle v-else>{{ notification.fk_room }}</v-list-item-subtitle>
                   </v-list-item-content>
                 </v-list-item>
 
@@ -64,20 +65,9 @@
         <v-card-text>
           <v-form @submit.prevent="addPhaseContent">
             <v-text-field v-model="phase" label="Phase" required></v-text-field>
-            <v-select
-              v-model="forword"
-              :items="rollChoices"
-              label="Forword"
-              required
-            ></v-select>
-            <v-select
-              v-model="fk_room"
-              :items="rooms"
-              item-text="name"
-              item-value="id"
-              label="Room"
-              required
-            ></v-select>
+            <v-select v-model="forword" :items="rollChoices" item-title="text" label="Forword" required></v-select>
+            <v-select v-model="fk_room" :items="rooms" item-title="name" item-value="id" label="Room"
+              required></v-select>
             <v-btn type="submit" color="primary">إضافة</v-btn>
             <v-btn @click="closeAddPhaseContentDialog" color="secondary">إلغاء</v-btn>
           </v-form>
@@ -110,6 +100,7 @@ export default {
         { text: "All", value: "all" },
       ],
       rooms: [],
+      // notifications: [], // قائمة الإشعارات
     };
   },
   methods: {
@@ -160,10 +151,12 @@ export default {
       this.websocket.onopen = () => {
         console.log("WebSocket connected for notifications");
       };
-
       this.websocket.onmessage = (event) => {
-        const notification = JSON.parse(event.data);
-        this.notifications.unshift(notification); // إضافة الإشعار الجديد إلى القائمة
+        const data = JSON.parse(event.data);
+        if (data.type === "notification") {
+                const notification = data.notification;
+                this.notifications.unshift(notification); // إضافة الإشعار الجديد إلى القائمة
+            }
       };
 
       this.websocket.onclose = () => {
@@ -182,6 +175,8 @@ export default {
       try {
         const response = await this.axios.get("/api/rooms/");
         this.rooms = response.data.rooms;
+        // console.log(this.rooms);
+
       } catch (error) {
         console.error("Error fetching rooms:", error);
       }

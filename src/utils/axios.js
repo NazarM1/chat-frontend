@@ -52,13 +52,13 @@ instance.interceptors.response.use(
 
       try {
         const refreshToken = localStorage.getItem('refreshToken');
-        console.log(refreshToken, 'refreshToken');
+        // console.log(refreshToken, 'refreshToken');
         const response = await instance.post('/api/login/refresh/', {
           refresh: refreshToken,
         });
 
         const newAccessToken = response.data.access;
-        console.log(newAccessToken, 'newAccessToken');
+        // console.log(newAccessToken, 'newAccessToken');
         localStorage.setItem('accessToken', newAccessToken);
         localStorage.setItem('refreshToken', response.data.refresh);
 

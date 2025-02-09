@@ -15,12 +15,12 @@
               </template>
 
               <v-list>
-                <v-list-item v-for="(notification, index) in notifications" :key="index">
+                <!-- عرض الإشعارات -->
+                <v-list-item v-for="(notification, index) in notifications" :key="index" @click="goToRoom(notification)">
                   <v-list-item-content>
                     <v-list-item-title>{{ notification.phase }}</v-list-item-title>
                     <v-list-item-subtitle>{{ notification.forword }}</v-list-item-subtitle>
-                    <v-list-item-subtitle v-if="notification.fk_room.name">{{ notification.fk_room.name
-                      }}</v-list-item-subtitle>
+                    <v-list-item-subtitle v-if="notification.fk_room.name">{{ notification.fk_room.name }}</v-list-item-subtitle>
                     <v-list-item-subtitle v-else>{{ notification.fk_room }}</v-list-item-subtitle>
                   </v-list-item-content>
                 </v-list-item>
@@ -100,7 +100,6 @@ export default {
         { text: "All", value: "all" },
       ],
       rooms: [],
-      // notifications: [], // قائمة الإشعارات
     };
   },
   methods: {
@@ -154,9 +153,9 @@ export default {
       this.websocket.onmessage = (event) => {
         const data = JSON.parse(event.data);
         if (data.type === "notification") {
-                const notification = data.notification;
-                this.notifications.unshift(notification); // إضافة الإشعار الجديد إلى القائمة
-            }
+          const notification = data.notification;
+          this.notifications.unshift(notification); // إضافة الإشعار الجديد إلى القائمة
+        }
       };
 
       this.websocket.onclose = () => {
@@ -175,8 +174,6 @@ export default {
       try {
         const response = await this.axios.get("/api/rooms/");
         this.rooms = response.data.rooms;
-        // console.log(this.rooms);
-
       } catch (error) {
         console.error("Error fetching rooms:", error);
       }
@@ -198,6 +195,11 @@ export default {
       this.phase = "";
       this.forword = "";
       this.fk_room = null;
+    },
+    goToRoom(notification) {
+      // الانتقال إلى الغرفة المحددة في الإشعار
+      const roomName = notification.fk_room.name || notification.fk_room;
+      this.$router.push({ name: 'Room', params: { roomName } });
     },
   },
   mounted() {

@@ -87,7 +87,7 @@ export default {
     messages: Array,
     selectedChatTitle: String,
     selectedRoom: String,
-    activeWebsockets: Object, // قائمة باتصالات WebSocket النشطة
+    websocket: Object, // WebSocket واحد لجميع المجموعات
   },
   data() {
     return {
@@ -122,25 +122,48 @@ export default {
       }
       return "";
     },
-    sendMessage() {
+    async sendMessage() {
       if (!this.newMessage.trim()) return;
 
       const messageData = {
         content: this.newMessage,
-        room: this.selectedRoom,
+        room: this.selectedRoom, // إضافة room لتحديد المجموعة
         user: localStorage.getItem("username"),
         media: null,
       };
 
-      const websocket = this.activeWebsockets[this.selectedRoom];
-      if (websocket && websocket.readyState === WebSocket.OPEN) {
-        websocket.send(JSON.stringify(messageData));
+      if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+        this.websocket.send(JSON.stringify(messageData));
       }
+
+      // إرسال إشعارات لأعضاء المجموعة
+      // await this.sendNotificationToGroupMembers(this.selectedRoom, this.newMessage);
 
       this.newMessage = "";
       this.scrollToBottom();
     },
-    uploadMedia(event) {
+    // async sendNotificationToGroupMembers(roomName, messageContent) {
+    //   try {
+    //     const response = await this.axios.get(`/api/rooms/${roomName}/members/`);
+    //     const members = response.data.members;
+
+    //     members.forEach(member => {
+    //       if (member.username !== localStorage.getItem("username")) {
+    //         this.showNotification({
+    //           content: messageContent,
+    //           user: {
+    //             username: localStorage.getItem("username"),
+    //             first_name: localStorage.getItem("first_name"),
+    //             last_name: localStorage.getItem("last_name"),
+    //           },
+    //         }, roomName);
+    //       }
+    //     });
+    //   } catch (error) {
+    //     console.error("Error fetching group members:", error);
+    //   }
+    // },
+    async uploadMedia(event) {
       const file = event.target.files[0];
       if (!file) return;
 
@@ -149,31 +172,41 @@ export default {
         const base64String = reader.result;
         const messageData = {
           content: "",
-          room: this.selectedRoom,
+          room: this.selectedRoom, // إضافة room لتحديد المجموعة
           user: localStorage.getItem("username"),
           media: base64String,
         };
 
-        const websocket = this.activeWebsockets[this.selectedRoom];
-        if (websocket && websocket.readyState === WebSocket.OPEN) {
-          websocket.send(JSON.stringify(messageData));
+        if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+          this.websocket.send(JSON.stringify(messageData));
         }
+
+        // إرسال إشعارات لأعضاء المجموعة
+        // this.sendNotificationToGroupMembers(this.selectedRoom, "رسالة وسائط");
       };
       reader.readAsDataURL(file);
       this.scrollToBottom();
     },
-    scrollToBottom() {
-  this.$nextTick(() => {
-    const container = this.$refs.messagesContainer;
-    if (container) {
-      // تأخير بسيط لضمان تحميل جميع العناصر (مثل الصور والوسائط)
-      setTimeout(() => {
-        container.scrollTop = container.scrollHeight;
-      }, 100); // يمكنك تعديل الوقت إذا كان هناك وسائط كبيرة
-    }
-  });
-},
+    showNotification(message, room) {
+      if (Notification.permission === "granted" && document.hidden) {
+        const notification = new Notification(`رسالة جديدة ${room}`, {
+          body: `${message.user.first_name} ${message.user.last_name}: ${message.content || "رسالة وسائط"}`,
+          icon: "@/assets/notifications.png",
+        });
 
+        notification.onclick = () => window.focus();
+      }
+    },
+    scrollToBottom() {
+      this.$nextTick(() => {
+        const container = this.$refs.messagesContainer;
+        if (container) {
+          setTimeout(() => {
+            container.scrollTop = container.scrollHeight;
+          }, 100);
+        }
+      });
+    },
   },
   watch: {
     messages: {

@@ -1,13 +1,10 @@
 <template>
   <v-container fluid>
     <v-row>
-
       <!-- ChatWindow.vue -->
       <ChatWindow :messages="messages" :selectedChatTitle="selectedChatTitle" :selectedRoom="selectedRoom"
-        :activeWebsockets="activeWebsockets" @newMessage="addNewMessage" @sendMessage="sendMessage"
-        @uploadMedia="uploadMedia" />
+        :websocket="websocket" @newMessage="addNewMessage" @sendMessage="sendMessage" @uploadMedia="uploadMedia" />
       <!-- Sidebar.vue -->
-
       <Sidebar :users="users" :groups="groups" :notifications="phaseContents" @selectChat="handleChatSelection" />
     </v-row>
   </v-container>
@@ -16,7 +13,6 @@
 <script>
 import Sidebar from "@/components/Sidebar.vue";
 import ChatWindow from "@/components/ChatWindow.vue";
-// import axios from "../utils/axios";
 
 export default {
   components: { Sidebar, ChatWindow },
@@ -28,12 +24,11 @@ export default {
       messages: [],
       selectedChatTitle: "",
       selectedRoom: null,
-      activeWebsockets: {}, // لتتبع اتصالات الـ WebSocket
-      phaseContents: [], // بيانات phase_contents
+      websocket: null, // WebSocket واحد لجميع المجموعات
+      phaseContents: [],
     };
   },
   methods: {
-
     isImage(path) {
       const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'];
       const extension = this.getFileExtension(path);
@@ -65,16 +60,12 @@ export default {
       try {
         const response = await this.axios.get("/api/rooms/");
         this.groups = response.data.rooms;
-        this.phaseContents = response.data.phase_contents; // تعيين phase_contents
-        console.log(this.phaseContents);
+        this.phaseContents = response.data.phase_contents;
+        console.log(this.groups);
 
-        // this.users = response.data.users;
-
-        // استرجاع الرسائل غير المقروءة
         const unreadMessagesResponse = await this.axios.get("/api/unread-messages/");
         const unreadMessages = unreadMessagesResponse.data.unread_messages;
 
-        // عرض الإشعارات للرسائل غير المقروءة
         unreadMessages.forEach(message => {
           this.showUnreadNotification({
             id: message.id,
@@ -85,11 +76,9 @@ export default {
               last_name: message.user_data.last_name,
             },
           }, message.room_name);
-          // console.log(message);
-
         });
 
-        this.initWebSocketConnections();
+        this.initWebSocketConnection(); // Initialize a single WebSocket connection
       } catch (error) {
         if (error.response && error.response.status === 401) {
           await this.logout();
@@ -97,96 +86,89 @@ export default {
         console.error("Error fetching rooms and users:", error);
       }
     },
-    initWebSocketConnections() {
+    initWebSocketConnection() {
       const token = localStorage.getItem("accessToken");
-      // console.log(token,'22222222222222222222222');
+      const socketUrl = `ws://localhost:3456/ws/chat/all/?token=${token}`; // WebSocket واحد لجميع المجموعات
 
-      this.groups.forEach((group) => {
-        const groupName = group.name;
-        if (!this.activeWebsockets[groupName]) {
+      this.websocket = new WebSocket(socketUrl);
 
-          const socketUrl = `ws://localhost:3456/ws/chat/${groupName}/?token=${token}`;
+      this.websocket.onopen = () => {
+        console.log("WebSocket connected for all groups");
+      };
 
+      this.websocket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
 
-          const websocket = new WebSocket(socketUrl);
+          // التحقق من أن المجموعة المرسلة منها الرسالة موجودة في this.groups
+          const isGroupValid = this.groups.some(group => group.name === data.room);
 
-          websocket.onopen = () => {
-            console.log(`WebSocket connected for group: ${groupName}`);
-          };
-
-          websocket.onmessage = (event) => {
-            try {
-              const data = JSON.parse(event.data);
-
-              // تحقق من نوع الرسالة
-              const isUser = data.user.username === localStorage.getItem("username");
-              let messageContent = data.message;
-              let media = null;
-              let messageType = 'text'; // نوع الرسالة الافتراضي هو نص
-
-              if (data.media && data.media.url) {
-                const mediaUrl = 'http://127.0.0.1:3456' + data.media.url;
-
-                if (this.isImage(mediaUrl)) {
-                  messageType = 'image';
-                  media = mediaUrl;
-                } else if (this.isVideo(mediaUrl)) {
-                  messageType = 'video';
-                  media = mediaUrl;
-                } else if (this.isAudio(mediaUrl)) {
-                  messageType = 'audio';
-                  media = mediaUrl;
-                } else if (this.isFile(mediaUrl)) {
-                  messageType = 'file';
-                  media = mediaUrl;
-                } else {
-                  messageType = 'text';
-                }
-              }
-              const newMessage = {
-                content: messageContent,
-                media: media,
-                user: {
-                  username: data.user.username,
-                  first_name: data.user.first_name,
-                  last_name: data.user.last_name,
-                },
-                formatted_time: data.timestamp,
-                isUser: data.user.username === localStorage.getItem("username"),
-                type: messageType,
-              };
-
-              if (isUser) {
-                this.messages.push(newMessage);
-              } else {
-                if (data.room == this.selectedRoom) {
-                  this.messages.push(newMessage);
-                  this.showNotification(newMessage, data.room);
-                } else {
-                  this.showUnreadNotification(newMessage, data.room);
-                }
-              }
-
-
-              this.$nextTick(() => {
-                this.scrollToBottom();
-              });
-
-            } catch (error) {
-              console.error("Error processing WebSocket message:", error);
-            }
-          };
-
-          websocket.onclose = () => {
-            console.log(`WebSocket connection closed for group: ${groupName}`);
-          };
-
-          if (!this.$root.activeWebsockets) {
-            this.$root.activeWebsockets = {};
+          if (!isGroupValid) {
+            console.log(`Message from unknown group: ${data.room}`);
+            return; // تجاهل الرسالة إذا كانت المجموعة غير موجودة
           }
-          this.activeWebsockets[groupName] = websocket;
+
+          const isUser = data.user.username === localStorage.getItem("username");
+          let messageContent = data.message;
+          let media = null;
+          let messageType = 'text';
+
+
+          if (data.media && data.media.url) {
+            const mediaUrl = 'http://127.0.0.1:3456' + data.media.url;
+
+            if (this.isImage(mediaUrl)) {
+              messageType = 'image';
+              media = mediaUrl;
+            } else if (this.isVideo(mediaUrl)) {
+              messageType = 'video';
+              media = mediaUrl;
+            } else if (this.isAudio(mediaUrl)) {
+              messageType = 'audio';
+              media = mediaUrl;
+            } else if (this.isFile(mediaUrl)) {
+              messageType = 'file';
+              media = mediaUrl;
+            } else {
+              messageType = 'text';
+            }
+          }
+
+          const newMessage = {
+            content: messageContent,
+            media: media,
+            user: {
+              username: data.user.username,
+              first_name: data.user.first_name,
+              last_name: data.user.last_name,
+            },
+            formatted_time: data.timestamp,
+            isUser: isUser,
+            type: messageType,
+            room: data.room, // إضافة room لتحديد المجموعة
+          };
+
+          // التحقق من أن الرسالة موجهة للمجموعة المحددة حاليًا
+          if (data.room === this.selectedRoom) {
+            this.messages.push(newMessage);
+            if (data.user.username === localStorage.getItem("username") ) {
+              this.showNotification(newMessage, data.room);
+            }
+          } else {
+            this.showUnreadNotification(newMessage, data.room);
+          }
+
+          this.$nextTick(() => {
+            this.scrollToBottom();
+          });
+        } catch (error) {
+          console.error("Error processing WebSocket message:", error);
         }
-      });
+      };
+
+      this.websocket.onclose = () => {
+        console.log("WebSocket connection closed");
+      };
     },
     handleChatSelection(chat) {
       this.fetchGroupMessages(chat.name);
@@ -225,20 +207,16 @@ export default {
       }
 
       await this.axios.post('/api/message/status/', { id: message.id });
-
     },
     scrollToBottom() {
       this.$nextTick(() => {
         const container = this.$refs.messagesContainer;
         if (container) {
-          // setTimeout(() => {
           container.scrollTop = container.scrollHeight;
-          // }, 100);
         }
       });
     },
   },
-
   mounted() {
     this.username = localStorage.getItem("username") || "Guest";
     this.fetchRoomsAndUsers();
@@ -246,9 +224,10 @@ export default {
       Notification.requestPermission();
     }
   },
-
   beforeDestroy() {
-    Object.values(this.activeWebsockets).forEach((websocket) => websocket.close());
+    if (this.websocket) {
+      this.websocket.close();
+    }
   },
 };
 </script>

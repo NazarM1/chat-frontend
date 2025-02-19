@@ -89,8 +89,10 @@ export default {
     initWebSocketConnection() {
       const token = localStorage.getItem("accessToken");
       const socketUrl = `ws://localhost:3456/ws/chat/all/?token=${token}`; // WebSocket واحد لجميع المجموعات
-
+      
       this.websocket = new WebSocket(socketUrl);
+      console.log(this.websocket.url,'rrrrrrrrrrrrrrr');
+
 
       this.websocket.onopen = () => {
         console.log("WebSocket connected for all groups");
